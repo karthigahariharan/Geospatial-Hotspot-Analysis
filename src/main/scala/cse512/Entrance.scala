@@ -12,7 +12,7 @@ object Entrance extends App {
   override def main(args: Array[String]) {
     val spark = SparkSession
       .builder()
-      .appName("CSE512-HotspotAnalysis-MYGROUPNAME") // YOU NEED TO CHANGE YOUR GROUP NAME
+      .appName("CSE512-HotspotAnalysis-DB-Warriors") // YOU NEED TO CHANGE YOUR GROUP NAME
       .config("spark.some.config.option", "some-value")//.master("local[*]")
       .getOrCreate()
 
@@ -53,8 +53,9 @@ object Entrance extends App {
       HotcellAnalysis.runHotcellAnalysis(spark, queryParam(0)).limit(50).write.mode(SaveMode.Overwrite).csv(outputPath)
     }
     else if (queryName.equalsIgnoreCase("hotzoneanalysis")) {
+      println("Hello"+queryParam(0)+"!")
       if (queryParam.length != 2) throw new ArrayIndexOutOfBoundsException("[CSE512] Query " + queryName + " needs 2 parameters but you entered " + queryParam.length)
-      HotzoneAnalysis.runHotZoneAnalysis(spark, queryParam(0), queryParam(1)).write.mode(SaveMode.Overwrite).csv(outputPath)
+      HotzoneAnalysis.runHotZoneAnalysis(spark, queryParam(0), queryParam(1)).coalesce(1).write.mode(SaveMode.Overwrite).csv(outputPath)
     }
     else {
       throw new NoSuchElementException("[CSE512] The given query name " + queryName + " is wrong. Please check your input.")

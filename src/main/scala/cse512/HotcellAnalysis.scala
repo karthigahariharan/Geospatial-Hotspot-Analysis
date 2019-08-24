@@ -42,8 +42,19 @@ def runHotcellAnalysis(spark: SparkSession, pointPath: String): DataFrame =
   val maxZ = 31
   val numCells = (maxX - minX + 1)*(maxY - minY + 1)*(maxZ - minZ + 1)
 
-  // YOU NEED TO CHANGE THIS PART
+  pickupInfo.createOrReplaceTempView("alltrips")
+  pickupInfo = spark.sql("select * from alltrips")
+  pickupInfo = pickupInfo.select(concat(pickupInfo.col("x"), lit(","), pickupInfo.col("y"),lit(","), pickupInfo.col("z")).alias("xyzVal"))
+  pickupInfo = pickupInfo.groupBy("xyzVal").agg(count("xyzVal").alias("hotness"))
+  pickupInfo.createOrReplaceTempView("alltrips")
+  val mean =  pickupInfo.agg(sum("hotness")).first.getLong(0).*(1.0)./(numCells)
+  val sd = scala.math.sqrt(pickupInfo.withColumn("newHotness", pow("hotness", 2)).agg(sum("newHotness")).first.getDouble(0)./(numCells).-(mean.*(mean)))
+  val pickupMap = pickupInfo.collect().map(row => (row.getString(0),row.getLong(1))).toMap
+  spark.udf.register("gScore",(xyzVal: String)=> HotcellUtils.getGScore(xyzVal, numCells.toInt, pickupMap, minX.toInt, maxX.toInt, minY.toInt, maxY.toInt, minZ.toInt,   maxZ.toInt, mean, sd ))
+  pickupInfo = spark.sql("select alltrips.xyzVal,gScore(alltrips.xyzVal) as gScore from alltrips")
+  pickupInfo = pickupInfo.sort(desc("gScore"))
+  pickupInfo = pickupInfo.selectExpr("split(xyzVal, ',')[0] as x","split(xyzVal, ',')[1] as y","split(xyzVal, ',')[2] as z")
+  return pickupInfo
+}
+}
 
-  return pickupInfo // YOU NEED TO CHANGE THIS PART
-}
-}
